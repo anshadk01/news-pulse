@@ -3,11 +3,17 @@ Configuration settings and RSS feed definitions for News Pulse.
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 DEFAULT_SQLITE_PATH = PROJECT_ROOT / "newspulse.db"
+
+# Load environment variables from .env files if present
+load_dotenv(BASE_DIR / ".env")
+load_dotenv(PROJECT_ROOT / "backend" / ".env")
+load_dotenv(PROJECT_ROOT / ".env")
 
 # Database Configuration (PostgreSQL supported via DATABASE_URL, with SQLite fallback)
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_SQLITE_PATH}")

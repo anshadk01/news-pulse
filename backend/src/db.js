@@ -149,13 +149,13 @@ async function getClusters({ sources, limit = 100, offset = 0 } = {}) {
     keywords: typeof r.keywords === 'string' ? JSON.parse(r.keywords || '[]') : (r.keywords || []),
     representativeHeadline: r.representative_headline,
     articleCount: Number(r.article_count),
-    startTime: r.start_time,
-    endTime: r.end_time,
+    startTime: r.start_time instanceof Date ? r.start_time.toISOString() : r.start_time,
+    endTime: r.end_time instanceof Date ? r.end_time.toISOString() : r.end_time,
     durationHours: Number(r.duration_hours || 0),
     intensityScore: Number(r.intensity_score || 1.0),
     sourceBreakdown: typeof r.source_breakdown === 'string' ? JSON.parse(r.source_breakdown || '{}') : (r.source_breakdown || {}),
-    createdAt: r.created_at,
-    updatedAt: r.updated_at
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    updatedAt: r.updated_at instanceof Date ? r.updated_at.toISOString() : r.updated_at
   }));
 
   // Apply source filtering if provided
@@ -190,8 +190,8 @@ async function getClusterById(clusterId) {
     keywords: typeof cluster.keywords === 'string' ? JSON.parse(cluster.keywords || '[]') : (cluster.keywords || []),
     representativeHeadline: cluster.representative_headline,
     articleCount: Number(cluster.article_count),
-    startTime: cluster.start_time,
-    endTime: cluster.end_time,
+    startTime: cluster.start_time instanceof Date ? cluster.start_time.toISOString() : cluster.start_time,
+    endTime: cluster.end_time instanceof Date ? cluster.end_time.toISOString() : cluster.end_time,
     durationHours: Number(cluster.duration_hours || 0),
     intensityScore: Number(cluster.intensity_score || 1.0),
     sourceBreakdown: typeof cluster.source_breakdown === 'string' ? JSON.parse(cluster.source_breakdown || '{}') : (cluster.source_breakdown || {}),
@@ -203,7 +203,7 @@ async function getClusterById(clusterId) {
       summary: a.summary,
       bodyText: a.body_text,
       url: a.url,
-      publishedAt: a.published_at,
+      publishedAt: a.published_at instanceof Date ? a.published_at.toISOString() : a.published_at,
       author: a.author,
       imageUrl: a.image_url
     }))

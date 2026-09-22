@@ -23,6 +23,26 @@ EXTRA_STOP_WORDS = {
     "video", "audio", "watch", "listen", "live", "update", "updates", "breaking"
 }
 
+def parse_to_dt(val):
+    """Safely convert ISO string or datetime object to UTC datetime."""
+    if isinstance(val, datetime.datetime):
+        if val.tzinfo is None:
+            return val.replace(tzinfo=datetime.timezone.utc)
+        return val.astimezone(datetime.timezone.utc)
+    try:
+        return datetime.datetime.fromisoformat(str(val).replace("Z", "+00:00")).astimezone(datetime.timezone.utc)
+    except Exception:
+        import dateutil.parser
+        dt = dateutil.parser.parse(str(val))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return dt.astimezone(datetime.timezone.utc)
+
+def parse_to_iso(val):
+    """Safely convert datetime object or string to UTC ISO-8601 string."""
+    dt = parse_to_dt(val)
+    return dt.isoformat()
+
 def preprocess_text(text):
     """Clean and normalize raw text for TF-IDF vectorization."""
     if not text:
@@ -199,10 +219,10 @@ def cluster_articles(articles):
         cluster_arts = [articles[idx] for idx in cluster_indices]
         
         # Sort articles chronologically
-        cluster_arts.sort(key=lambda x: x["published_at"])
+        cluster_arts.sort(key=lambda x: parse_to_dt(x["published_at"]))
 
-        earliest_dt = datetime.datetime.fromisoformat(cluster_arts[0]["published_at"].replace("Z", "+00:00"))
-        latest_dt = datetime.datetime.fromisoformat(cluster_arts[-1]["published_at"].replace("Z", "+00:00"))
+        earliest_dt = parse_to_dt(cluster_arts[0]["published_at"])
+        latest_dt = parse_to_dt(cluster_arts[-1]["published_at"])
         duration_hours = max(0.1, round((latest_dt - earliest_dt).total_seconds() / 3600.0, 2))
 
         # Generate label and keywords
@@ -230,8 +250,8 @@ def cluster_articles(articles):
             "keywords": keywords,
             "representative_headline": rep_headline,
             "article_count": len(cluster_arts),
-            "start_time": cluster_arts[0]["published_at"],
-            "end_time": cluster_arts[-1]["published_at"],
+            "start_time": parse_to_iso(cluster_arts[0]["published_at"]),
+            "end_time": parse_to_iso(cluster_arts[-1]["published_at"]),
             "duration_hours": duration_hours,
             "intensity_score": intensity,
             "source_breakdown": source_counts,
