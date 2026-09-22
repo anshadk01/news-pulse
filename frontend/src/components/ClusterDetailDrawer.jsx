@@ -10,7 +10,7 @@ import {
   BookOpen, 
   ArrowLeft 
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCluster } from '../api/client';
 
@@ -20,6 +20,17 @@ const SOURCE_COLORS = {
   guardian: { bg: 'bg-sky-500/15', text: 'text-sky-300', border: 'border-sky-500/30' },
   aljazeera: { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30' }
 };
+
+function formatTimestamp(value, pattern) {
+  if (!value || typeof value !== 'string') return 'Date unavailable';
+
+  const date = parseISO(value);
+  return isValid(date) ? format(date, pattern) : 'Date unavailable';
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
 
 export default function ClusterDetailDrawer({ clusterId, onClose }) {
   const { data: cluster, isLoading, error } = useCluster(clusterId);
@@ -94,7 +105,7 @@ export default function ClusterDetailDrawer({ clusterId, onClose }) {
                   <div>
                     <span className="text-slate-400 block mb-1">Time Horizon</span>
                     <span className="font-mono text-slate-200">
-                      {format(parseISO(cluster.startTime), 'MMM d, HH:mm')}
+                      {formatTimestamp(cluster.startTime, 'MMM d, HH:mm')}
                     </span>
                   </div>
                   <div>
@@ -116,13 +127,13 @@ export default function ClusterDetailDrawer({ clusterId, onClose }) {
                 </div>
 
                 {/* Keywords Cloud */}
-                {cluster.keywords?.length > 0 && (
+                {asArray(cluster.keywords).length > 0 && (
                   <div>
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                       Key Topic Terms & Entities
                     </h4>
                     <div className="flex flex-wrap gap-1.5">
-                      {cluster.keywords.map((kw, i) => (
+                      {asArray(cluster.keywords).map((kw, i) => (
                         <span
                           key={i}
                           className="px-2.5 py-1 rounded-lg bg-sky-950/60 text-sky-300 border border-sky-800/50 text-xs font-medium"
@@ -138,13 +149,13 @@ export default function ClusterDetailDrawer({ clusterId, onClose }) {
                 <div>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Story Timeline Progression ({cluster.articles?.length || 0} Articles)</span>
+                    <span>Story Timeline Progression ({asArray(cluster.articles).length} Articles)</span>
                   </h4>
 
                   <div className="space-y-4 relative before:absolute before:left-3 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-800">
-                    {cluster.articles?.map((article, index) => {
+                    {asArray(cluster.articles).map((article) => {
                       const sourceTheme = SOURCE_COLORS[article.sourceId] || { bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700' };
-                      const publishedFormatted = format(parseISO(article.publishedAt), 'EEEE, MMM d, yyyy • HH:mm (UTC)');
+                      const publishedFormatted = formatTimestamp(article.publishedAt, "EEEE, MMM d, yyyy • HH:mm '(UTC)'");
 
                       return (
                         <div key={article.id} className="relative pl-8 group">
@@ -177,7 +188,7 @@ export default function ClusterDetailDrawer({ clusterId, onClose }) {
                             )}
 
                             {/* Extracted Body snippet */}
-                            {article.bodyText && article.bodyText !== article.summary && (
+                            {typeof article.bodyText === 'string' && article.bodyText !== article.summary && (
                               <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/60 text-xs text-slate-400 leading-relaxed mb-3 max-h-32 overflow-y-auto">
                                 <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
                                   Full Text Extract:

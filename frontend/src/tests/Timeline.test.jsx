@@ -4,6 +4,12 @@ import React from 'react';
 import SourceFilter from '../components/SourceFilter';
 import ClusterCard from '../components/ClusterCard';
 import TimelineView from '../components/TimelineView';
+import ClusterDetailDrawer from '../components/ClusterDetailDrawer';
+import { useCluster } from '../api/client';
+
+vi.mock('../api/client', () => ({
+  useCluster: vi.fn()
+}));
 
 describe('SourceFilter Component', () => {
   it('renders all source buttons', () => {
@@ -114,5 +120,67 @@ describe('TimelineView Component', () => {
 
     expect(screen.getByText('Latest on Left (RTL)')).toBeInTheDocument();
     expect(screen.getByText(/Right-to-Left Mode/)).toBeInTheDocument();
+  });
+});
+
+describe('ClusterDetailDrawer Component', () => {
+  it('keeps the interface visible when detail data contains invalid dates', () => {
+    useCluster.mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: {
+        id: 'cluster-1',
+        label: 'Topic with incomplete metadata',
+        articleCount: 1,
+        startTime: null,
+        durationHours: 0,
+        intensityScore: 1,
+        sourceBreakdown: {},
+        keywords: [],
+        articles: [{
+          id: 'article-1',
+          sourceId: 'bbc',
+          sourceName: 'BBC News',
+          title: 'Article without a date',
+          publishedAt: 'not-a-date',
+          url: 'https://example.com/article'
+        }]
+      }
+    });
+
+    render(<ClusterDetailDrawer clusterId="cluster-1" onClose={vi.fn()} />);
+
+    expect(screen.getByText('Topic with incomplete metadata')).toBeInTheDocument();
+    expect(screen.getAllByText('Date unavailable')).toHaveLength(2);
+    expect(screen.getByText('Article without a date')).toBeInTheDocument();
+  });
+
+  it('formats a valid article timestamp without treating UTC as date tokens', () => {
+    useCluster.mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: {
+        id: 'cluster-2',
+        label: 'Topic with a valid date',
+        articleCount: 1,
+        startTime: '2026-09-23T12:30:00Z',
+        durationHours: 0,
+        intensityScore: 1,
+        sourceBreakdown: {},
+        keywords: [],
+        articles: [{
+          id: 'article-2',
+          sourceId: 'bbc',
+          sourceName: 'BBC News',
+          title: 'Article with a valid date',
+          publishedAt: '2026-09-23T12:30:00Z',
+          url: 'https://example.com/article'
+        }]
+      }
+    });
+
+    render(<ClusterDetailDrawer clusterId="cluster-2" onClose={vi.fn()} />);
+
+    expect(screen.getByText(/\(UTC\)/)).toBeInTheDocument();
   });
 });
