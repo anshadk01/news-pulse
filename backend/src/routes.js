@@ -1,10 +1,21 @@
-/**
- * REST API Route definitions for News Pulse.
- */
-const express = require('express');
-const router = express.Router();
-const db = require('./db');
-const jobManager = require('./jobManager');
+// Root API status & directory
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    service: 'News Pulse REST API',
+    status: 'online',
+    version: '1.0.0',
+    documentation: {
+      health: '/health',
+      timeline: '/timeline',
+      clusters: '/clusters',
+      clusterDetail: '/clusters/:id',
+      triggerIngest: 'POST /ingest/trigger',
+      ingestStatus: '/ingest/status/:jobId'
+    },
+    message: 'News Pulse backend API is running smoothly. Connect your frontend or explore endpoints.'
+  });
+});
 
 // Health check
 router.get('/health', (req, res) => {
