@@ -50,10 +50,12 @@ app.use((err, req, res, next) => {
 
 // Start server if not running in test mode
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n==============================================`);
-    console.log(`🚀 News Pulse API running on http://localhost:${PORT}`);
+    console.log(`🚀 News Pulse API running on port ${PORT} (0.0.0.0)`);
     console.log(`📊 Endpoints:`);
+    console.log(`   - GET  /`);
+    console.log(`   - GET  /health`);
     console.log(`   - GET  /clusters`);
     console.log(`   - GET  /clusters/:id`);
     console.log(`   - GET  /timeline`);

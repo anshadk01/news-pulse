@@ -1,3 +1,12 @@
+/**
+ * News Pulse REST API routes.
+ */
+const express = require('express');
+const db = require('./db');
+const jobManager = require('./jobManager');
+
+const router = express.Router();
+
 // Root API status & directory
 router.get('/', (req, res) => {
   res.json({

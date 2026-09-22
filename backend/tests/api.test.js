@@ -3,17 +3,31 @@
  */
 const { test, describe, before } = require('node:test');
 const assert = require('node:assert');
+const os = require('node:os');
+const path = require('node:path');
 const request = require('supertest');
 
 process.env.NODE_ENV = 'test';
+process.env.SQLITE_PATH = path.join(os.tmpdir(), `news-pulse-api-test-${process.pid}.db`);
 const app = require('../src/server');
 
 describe('News Pulse API Endpoints', () => {
 
+  test('GET / and GET /api return the API directory', async () => {
+    for (const endpoint of ['/', '/api']) {
+      const res = await request(app).get(endpoint);
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.strictEqual(res.body.service, 'News Pulse REST API');
+    }
+  });
+
   test('GET /health returns 200 and status ok', async () => {
-    const res = await request(app).get('/health');
-    assert.strictEqual(res.statusCode, 200);
-    assert.strictEqual(res.body.status, 'ok');
+    for (const endpoint of ['/health', '/api/health']) {
+      const res = await request(app).get(endpoint);
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.body.status, 'ok');
+    }
   });
 
   test('GET /clusters returns topic clusters array', async () => {

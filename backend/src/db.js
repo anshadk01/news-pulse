@@ -5,7 +5,11 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { Pool } = require('pg');
 
-const DATABASE_URL = process.env.DATABASE_URL || '';
+// Tests must never connect to a configured production database. A test-specific
+// URL can still be supplied when PostgreSQL integration tests are desired.
+const DATABASE_URL = process.env.NODE_ENV === 'test'
+  ? (process.env.TEST_DATABASE_URL || '')
+  : (process.env.DATABASE_URL || '');
 const isPostgres = DATABASE_URL.startsWith('postgres://') || DATABASE_URL.startsWith('postgresql://');
 const DEFAULT_SQLITE_PATH = path.resolve(__dirname, '../../newspulse.db');
 
@@ -54,9 +58,14 @@ function initTables() {
 }
 
 if (isPostgres) {
+  // Clean query parameters that might cause pg-connection-string issues
+  const cleanDbUrl = DATABASE_URL.replace('&channel_binding=require', '').replace('?channel_binding=require', '');
   pgPool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: cleanDbUrl,
+    ssl: { rejectUnauthorized: false }
+  });
+  pgPool.on('error', (err) => {
+    console.error('[DB POOL ERROR]', err.message);
   });
 } else {
   const dbPath = process.env.SQLITE_PATH || DEFAULT_SQLITE_PATH;
