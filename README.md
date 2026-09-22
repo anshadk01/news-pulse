@@ -1,238 +1,578 @@
-# News Pulse — Topic-Clustered News Timeline
+# 📰 News Pulse — Topic-Clustered News Timeline
 
-**News Pulse** is an end-to-end full-stack news intelligence platform that continuously ingests live RSS feeds from global news outlets, normalizes disparate formats, extracts full-text articles, groups related reporting into coherent topic clusters using **TF-IDF Vectorization & Cosine Similarity Thresholding**, and visualizes them on a responsive, interactive timeline built with **React (Vite), TanStack Query, and Framer Motion**.
+News Pulse is a full-stack news intelligence platform that collects news from multiple RSS feeds, extracts and cleans article content, groups related articles using NLP, and displays the results through an interactive React timeline.
+
+## 🚀 Features
+
+* Multi-source RSS news ingestion
+* Article extraction and text preprocessing
+* SHA-256 URL deduplication
+* Publication date normalization
+* TF-IDF based topic representation
+* Cosine Similarity + Jaccard similarity
+* Automatic topic clustering and labels
+* Story intensity and duration calculation
+* Source filtering and search
+* Asynchronous data refresh
+* Automated testing
+* Docker-ready deployment
+
+## 🛠️ Technology Stack
+
+### Frontend
+
+* React
+* Vite
+* Tailwind CSS
+* Framer Motion
+* TanStack Query
+* Vitest
+* React Testing Library
+
+### Backend
+
+* Node.js
+* Express.js
+* REST API
+* Supertest
+* Node.js Test Runner
+* dotenv
+
+### NLP / Data Processing
+
+* Python
+* scikit-learn
+* NumPy
+* Trafilatura
+* BeautifulSoup
+* python-dateutil
+* TF-IDF
+* Cosine Similarity
+* Jaccard Similarity
+
+### Database & DevOps
+
+* SQLite for development
+* PostgreSQL / Supabase for production
+* Docker
+* Git & GitHub
+* GitHub Actions
 
 ---
 
-## 🏛️ System Architecture
+## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             NEWS PULSE ARCHITECTURE                         │
-└─────────────────────────────────────────────────────────────────────────────┘
-
- [RSS Feeds]          [Python Pipeline (/scraper)]          [Storage Layer]
- ┌─────────────┐     ┌────────────────────────────┐      ┌──────────────────┐
- │ • BBC News  │────>│ • Feed Normalizer (RFC822) │─────>│ SQLite (Dev)     │
- │ • NPR News  │     │ • SHA-256 Deduplication    │      │  - or -          │
- │ • Guardian  │     │ • Full Text (trafilatura)  │      │ PostgreSQL /     │
- │ • Al Jazeera│     │ • TF-IDF + Cosine Clustering│     │ Supabase (Prod)  │
- └─────────────┘     └────────────────────────────┘      └────────┬─────────┘
-                                                                  │
-                                                                  ▼
- [React Frontend (/frontend)]           [Node.js REST API (/backend)]
- ┌──────────────────────────────┐       ┌──────────────────────────────┐
- │ • Responsive Time Axis       │<─────>│ • GET  /clusters             │
- │ • Visual Intensity Sizing    │(JSON) │ • GET  /clusters/:id         │
- │ • Source Filter (BBC/NPR/etc)│       │ • GET  /timeline             │
- │ • Chronological Story Drawer │       │ • POST /ingest/trigger       │
- │ • TanStack Query & Motion    │       │ • GET  /ingest/status/:jobId │
- └──────────────────────────────┘       └──────────────────────────────┘
+```text
+             RSS FEEDS
+     BBC / NPR / Guardian
+          / Al Jazeera
+               |
+               v
+      +------------------+
+      |  Python Scraper  |
+      |                  |
+      | RSS Parsing      |
+      | Text Extraction  |
+      | Preprocessing    |
+      | Deduplication    |
+      | TF-IDF           |
+      | Similarity       |
+      | Clustering       |
+      +--------+---------+
+               |
+               v
+          +---------+
+          | Database|
+          | SQLite /|
+          |Postgres |
+          +----+----+
+               |
+               v
+      +------------------+
+      | Node + Express   |
+      | REST API         |
+      | Job Management   |
+      +--------+---------+
+               |
+               | JSON
+               v
+      +------------------+
+      | React + Vite     |
+      | Interactive UI   |
+      +------------------+
 ```
 
 ---
 
-## 🚀 Directory Structure
+## 📁 Project Structure
 
-```
+```text
 news-pulse/
-├── scraper/              # Python RSS Ingestion, Extraction & NLP Topic Clustering
-│   ├── config.py         # Feeds, headers, DB paths, and NLP thresholds
-│   ├── rss_parser.py     # Date parsing, HTML sanitization, SHA-256 deduplication
-│   ├── extractor.py      # Resilient full-text extractor (trafilatura + bs4 fallback)
-│   ├── clusterer.py      # TF-IDF + Cosine Similarity threshold grouping & labels
-│   ├── database.py       # Unified SQLite / PostgreSQL driver layer
-│   ├── main.py           # CLI orchestrator & JSON status emitter
-│   ├── tests/            # Pytest test suite
+├── scraper/
+│   ├── config.py
+│   ├── rss_parser.py
+│   ├── extractor.py
+│   ├── clusterer.py
+│   ├── database.py
+│   ├── main.py
+│   ├── tests/
 │   └── requirements.txt
 │
-├── backend/              # Node.js Express REST API
+├── backend/
 │   ├── src/
-│   │   ├── db.js         # SQLite / PostgreSQL async query client
-│   │   ├── jobManager.js # Async job queue & Python subprocess runner
-│   │   ├── routes.js     # /clusters, /timeline, /ingest API endpoints
-│   │   └── server.js     # Express app configuration & middleware
-│   ├── tests/            # Automated API test suite
-│   ├── .env.example
+│   │   ├── db.js
+│   │   ├── jobManager.js
+│   │   ├── routes.js
+│   │   └── server.js
+│   ├── tests/
 │   └── package.json
 │
-├── frontend/             # React (Vite) + TanStack Query + Tailwind CSS
+├── frontend/
 │   ├── src/
-│   │   ├── api/client.js # TanStack Query hooks & polling client
-│   │   ├── components/   # Header, TimelineView, ClusterCard, Drawer, Modals
-│   │   ├── App.jsx       # Root dashboard state orchestrator
-│   │   └── index.css     # Dark glassmorphism & responsive styles
-│   ├── tests/            # Vitest component unit tests
-│   ├── vite.config.js
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── App.jsx
+│   │   └── index.css
+│   ├── tests/
 │   └── package.json
 │
-├── README.md             # Documentation (Architecture, Methodology, Deployment)
-└── VIDEO_SCRIPT.md       # 2–3 Minute Video Walkthrough Script
+├── Dockerfile
+└── README.md
 ```
 
 ---
 
-## 📡 News Sources Used
+# 🧠 Topic Clustering Methodology
 
-| Source | Category | URL |
-| :--- | :--- | :--- |
-| **BBC News** | World / Top Stories | `http://feeds.bbci.co.uk/news/world/rss.xml` |
-| **NPR News** | General / National | `https://feeds.npr.org/1001/rss.xml` |
-| **The Guardian** | World News | `https://www.theguardian.com/world/rss` |
-| **Al Jazeera English** | World / International | `https://www.aljazeera.com/xml/rss/all.xml` |
+## Why TF-IDF instead of Keyword Overlap?
+
+News Pulse uses **TF-IDF + Cosine Similarity** instead of simple keyword-overlap.
+
+Keyword overlap only checks whether two articles contain the same words. This can fail when different publishers describe the same event using different vocabulary.
+
+TF-IDF gives higher importance to distinctive terms and lower importance to common terms. It was therefore selected because it provides a lightweight, explainable and practical approach for comparing news articles without requiring a large embedding model.
+
+## NLP Pipeline
+
+```text
+Article
+   ↓
+HTML Cleaning
+   ↓
+Text Normalization
+   ↓
+Stopword Removal
+   ↓
+Title + Summary + Body
+   ↓
+TF-IDF Vectorization
+   ↓
+Cosine Similarity
+   ↓
+Jaccard Token Overlap
+   ↓
+Hybrid Similarity Score
+   ↓
+Topic Cluster
+```
+
+The article title is repeated **3 times** because headlines generally contain the most important information about a news story.
+
+Sublinear TF scaling is also used:
+
+```text
+TF = 1 + log(tf)
+```
+
+This prevents long articles from dominating shorter articles simply because they contain more words.
 
 ---
 
-## 🧠 Topic-Grouping Methodology (Option B: TF-IDF + Cosine Similarity)
+# 📐 Similarity Calculation
 
-### 1. Vectorization & Lexical Weighting
-- **Preprocessing**: Cleans raw HTML tags, strips URL parameters, normalizes whitespace, and filters both English stopwords and custom journalistic filler words (`said`, `reported`, `breaking`, `update`).
-- **Title Boosting**: Article titles carry the dense semantic core of the story. In the TF-IDF corpus, the title is repeated ($3\times$) alongside the summary and leading body text.
-- **Sublinear TF Scaling**: Uses `sublinear_tf=True` ($1 + \log(\text{tf})$) to prevent long article bodies from overwhelming concise breaking news summaries.
+The system combines two signals:
 
-### 2. Similarity Metric & Thresholding
-- Computes pairwise cosine similarities across the TF-IDF feature space:
-  $$\text{Cosine Similarity}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\| \|\mathbf{v}\|}$$
-- Uses a hybrid metric combining TF-IDF cosine similarity ($60\%$) with non-stopword Jaccard token overlap ($40\%$).
-- **Threshold Calibration**: Empirically tuned to **`0.20`** (or $\ge 3$ shared story entities). This captures multi-outlet reporting on the same underlying event (e.g. Federal Reserve interest rate decisions, global climate summits) while avoiding spurious links between unrelated stories.
+```text
+60% → TF-IDF Cosine Similarity
+40% → Jaccard Token Overlap
+```
 
-### 3. Deterministic Label Generation
-- Rather than arbitrary cluster numbers, each cluster is labeled deterministically by identifying the top $3$ terms with the highest mean TF-IDF weight inside the cluster.
-- The most central representative headline is selected to serve as the descriptive subtitle.
+Conceptually:
 
-### 4. Time Span & Intensity Metrics
-- Calculates `startTime` (earliest article) and `endTime` (latest article).
-- `durationHours` $=\max(0.1, (\text{endTime} - \text{startTime}) / 3600)$.
-- `intensityScore` balances article volume ($\log_2(N+1)$) and cross-source diversity multiplier (more outlets reporting on the same event yields a higher visual intensity score).
+```text
+Hybrid Score =
+    (0.60 × Cosine Similarity)
+    +
+    (0.40 × Jaccard Similarity)
+```
 
-### Limitations Noticed
-1. **Vocabulary Drift / Fast-Evolving Stories**: As a breaking story develops over several days (e.g., initial disaster $\rightarrow$ rescue operation $\rightarrow$ political inquiry), keyword overlap decreases, which may cause late-stage follow-ups to form a secondary adjacent cluster rather than merging into the original event.
-2. **Short Headlines**: Rare articles with extremely terse headlines ($<5$ words) and no body text have lower vector overlap and may remain as single-article clusters unless they share unique named entities.
+Cosine similarity measures similarity between TF-IDF vectors, while Jaccard overlap provides additional evidence when articles share meaningful tokens or entities.
 
 ---
 
-## 🛠️ Quick Start & Local Setup
+# 🎯 Threshold Selection
 
-### Prerequisites
-- Node.js (v18+)
-- Python (3.10+)
+The similarity threshold was empirically tuned to:
 
-### 1. Scraper Setup & Test
+```text
+0.20
+```
+
+Articles with a hybrid similarity score around or above `0.20` are considered related. Approximately **3 shared meaningful story entities** are also used as supporting evidence.
+
+A lower threshold produced overly broad clusters because unrelated news articles can share generic words such as `government`, `official`, `country`, and `new`.
+
+A much higher threshold separated articles covering the same event when publishers used different wording.
+
+Therefore, `0.20` was selected as a practical balance between false merges and missed relationships.
+
+---
+
+# 🏷️ Cluster Labels
+
+After clustering, the system generates human-readable labels by:
+
+1. Collecting articles belonging to a cluster.
+2. Calculating important TF-IDF terms.
+3. Selecting the top 3 distinctive terms.
+4. Selecting a representative headline.
+
+Example:
+
+```text
+Federal Reserve | Interest Rates | Inflation
+
+"Federal Reserve holds rates steady..."
+```
+
+---
+
+# 📊 Story Intensity
+
+Story intensity considers both:
+
+* Number of articles in a cluster
+* Number of different news sources covering the story
+
+Article volume uses logarithmic scaling:
+
+```text
+log2(N + 1)
+```
+
+where `N` is the number of articles.
+
+A story reported by several different publishers therefore receives higher visual intensity than an isolated article.
+
+---
+
+# ⚠️ Known Limitation
+
+The main limitation is **vocabulary drift**.
+
+A story may evolve over several days:
+
+```text
+Initial Event
+     ↓
+Rescue Operation
+     ↓
+Investigation
+     ↓
+Political Response
+```
+
+As the vocabulary changes, TF-IDF similarity can decrease. This can cause later developments of the same story to form a separate cluster.
+
+Short headlines with little body text can also produce weak similarity scores.
+
+A future version could use **Sentence Transformers + vector embeddings + pgvector** for stronger semantic matching.
+
+---
+
+# 🔌 What Runs Where?
+
+## Frontend — React
+
+Location:
+
+```text
+/frontend
+```
+
+Development server:
+
+```text
+http://localhost:5173
+```
+
+Responsible for:
+
+* Timeline visualization
+* Filtering and search
+* Story details
+* Animations
+* API polling
+* User interaction
+
+React is kept separate from the processing layer so the browser only handles presentation and user interaction.
+
+---
+
+## Backend — Node.js + Express
+
+Location:
+
+```text
+/backend
+```
+
+Development server:
+
+```text
+http://localhost:5000
+```
+
+Responsible for:
+
+* REST API
+* Database queries
+* Ingestion triggers
+* Job management
+* Starting the Python pipeline
+
+Main endpoints:
+
+```text
+GET  /health
+GET  /clusters
+GET  /clusters/:id
+GET  /timeline
+POST /ingest/trigger
+GET  /ingest/status/:jobId
+```
+
+Node.js acts as the API and orchestration layer between the frontend, database and Python pipeline.
+
+---
+
+## Python Scraper / NLP Pipeline
+
+Location:
+
+```text
+/scraper
+```
+
+Responsible for:
+
+```text
+RSS
+ ↓
+Extraction
+ ↓
+Cleaning
+ ↓
+Deduplication
+ ↓
+TF-IDF
+ ↓
+Similarity
+ ↓
+Clustering
+ ↓
+Database
+```
+
+Python is used because it provides mature libraries for NLP, text processing and machine learning.
+
+---
+
+## Database
+
+### Development
+
+**SQLite** is used locally because it requires no separate database server and makes development simple.
+
+### Production
+
+**PostgreSQL** is recommended for production because it provides better concurrency, scalability and managed cloud deployment options such as Supabase or Neon.
+
+---
+
+# 🔄 Complete Data Flow
+
+When the user clicks **Refresh Data**:
+
+```text
+React
+  |
+  | POST /ingest/trigger
+  v
+Node.js
+  |
+  | Starts Python process
+  v
+Python Scraper
+  |
+  ├── Fetch RSS feeds
+  ├── Extract articles
+  ├── Remove duplicates
+  ├── Run NLP clustering
+  └── Save results
+          |
+          v
+       Database
+          |
+          v
+     Node.js API
+          |
+          v
+React + TanStack Query
+          |
+          v
+Updated Timeline
+```
+
+This separation keeps:
+
+```text
+React      → UI and user interaction
+Node.js    → API and orchestration
+Python     → Data processing and NLP
+Database   → Persistent storage
+```
+
+---
+
+# 🧪 Testing
+
+### Python
+
 ```bash
 cd scraper
 pip install -r requirements.txt
-
-# Run unit tests
 pytest tests/ -v
-
-# Run live ingestion & clustering
-python main.py
 ```
 
-### 2. Backend Setup & Test
+Tests cover RSS parsing, deduplication, date handling, text processing and clustering.
+
+### Backend
+
 ```bash
 cd backend
 npm install
-
-# Run automated API tests
 npm test
-
-# Start the API server (http://localhost:5000)
 npm start
 ```
 
-### 3. Frontend Setup & Test
+Tests cover health checks, cluster APIs, timeline APIs and ingestion jobs.
+
+### Frontend
+
 ```bash
 cd frontend
 npm install
-
-# Run unit tests
 npm test
-
-# Start the Vite development server (http://localhost:5173)
 npm run dev
-
-# Or build for production
-npm run build
 ```
 
----
-
-## 🌐 Complete Step-by-Step Deployment Guide
-
-The assessment requires a live deployment of all components on free-tier platforms.
-
-### Architecture Mapping
-- **Database**: **Supabase** or **Neon** (Free Managed PostgreSQL)
-- **Backend API & Python Scraper**: **Render** or **Railway** (Dockerized Node + Python runtime)
-- **Frontend**: **Vercel** or **Netlify** (Vite + React SPA)
-- **Scheduled Ingestion**: Built-in **Node Subprocess trigger** on UI refresh + **GitHub Actions Cron** (every 4 hours)
+Tests cover components, filters, cluster rendering and user interactions.
 
 ---
 
-### Step 1: Database Setup (Supabase / Neon) — *2 minutes*
-1. Create a free account at [supabase.com](https://supabase.com) or [neon.tech](https://neon.tech).
-2. Create a new project (e.g. `news-pulse-db`).
-3. Copy the **PostgreSQL Connection URI** from Database Settings:
-   ```
-   postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
-   ```
+# 🐳 Docker
 
----
+Build:
 
-### Step 2: Push Repository to GitHub
 ```bash
-git init
-git add .
-git commit -m "feat: complete news-pulse full-stack system"
-git branch -M main
-git remote add origin https://github.com/<your-username>/news-pulse.git
-git push -u origin main
+docker build -t news-pulse .
+```
+
+Run:
+
+```bash
+docker run -p 5000:5000 news-pulse
+```
+
+Docker provides a consistent environment for the Node.js and Python dependencies required by the backend and NLP pipeline.
+
+---
+
+# 🚀 Local Setup
+
+### 1. Scraper
+
+```bash
+cd scraper
+pip install -r requirements.txt
+python main.py
+```
+
+### 2. Backend
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:5173
 ```
 
 ---
 
-### Step 3: Deploy Backend API on Render or Railway — *3 minutes*
+# 🌍 Production Architecture
 
-#### Option A: Render (Recommended)
-1. Go to [render.com](https://render.com) and click **New +** $\rightarrow$ **Web Service**.
-2. Connect your GitHub repository `news-pulse`.
-3. Select **Docker** as the Environment (Render detects the included `Dockerfile` automatically).
-4. In **Environment Variables**, add:
-   - `DATABASE_URL` = `postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres`
-   - `NODE_ENV` = `production`
-   - `PORT` = `5000`
-5. Click **Create Web Service**.
-6. Once deployed, copy your live backend URL (e.g. `https://news-pulse-api.onrender.com`).
-
----
-
-### Step 4: Deploy React Frontend on Vercel — *2 minutes*
-1. Go to [vercel.com](https://vercel.com) and click **Add New...** $\rightarrow$ **Project**.
-2. Import your GitHub repository `news-pulse`.
-3. In **Project Settings**:
-   - **Root Directory**: Select `frontend`
-   - **Framework Preset**: `Vite`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-4. Under **Environment Variables**, add:
-   - `VITE_API_URL` = `https://news-pulse-api.onrender.com` *(your live Render backend URL from Step 3)*
-5. Click **Deploy**.
-6. Your frontend is live at `https://news-pulse-app.vercel.app`!
+```text
+React + Vite
+     |
+     v
+  Vercel
+     |
+     v
+Node + Python + Docker
+     |
+     v
+  Render
+     |
+     v
+PostgreSQL
+     |
+     v
+   Neon
+```
 
 ---
 
-### Step 5: (Optional) Enable GitHub Actions Cron
-1. In your GitHub repo, go to **Settings** $\rightarrow$ **Secrets and variables** $\rightarrow$ **Actions**.
-2. Add a new repository secret:
-   - Name: `DATABASE_URL`
-   - Value: `postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres`
-3. The `.github/workflows/scheduled_ingest.yml` workflow will automatically run every 4 hours.
+# 📌 Summary
 
----
+News Pulse combines:
 
-## 🧪 Automated Testing Summary
+```text
+RSS Ingestion
++ Python NLP
++ TF-IDF
++ Cosine Similarity
++ Jaccard Similarity
++ Topic Clustering
++ Node.js REST API
++ React
++ TanStack Query
++ SQLite / PostgreSQL
++ Docker
++ Automated Testing
+```
 
-- **Scraper (`pytest`)**: Verifies SHA-256 deduplication hashing, RFC 822/ISO publication date normalization, HTML cleaning, and TF-IDF topic clustering assertions.
-- **Backend API (`node --test` + `supertest`)**: Verifies `GET /health`, `GET /clusters`, `GET /timeline`, `GET /clusters/:id` (404/200), `POST /ingest/trigger`, and `GET /ingest/status/:jobId`.
-- **Frontend (`vitest` + `@testing-library/react`)**: Verifies `SourceFilter` button toggles, `ClusterCard` rendering, metadata badges, and click triggers.
+The goal is to transform individual news articles from multiple publishers into a structured timeline of evolving stories and cross-source reporting.
