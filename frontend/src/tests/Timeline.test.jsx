@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import SourceFilter from '../components/SourceFilter';
 import ClusterCard from '../components/ClusterCard';
+import TimelineView from '../components/TimelineView';
 
 describe('SourceFilter Component', () => {
   it('renders all source buttons', () => {
@@ -82,5 +83,36 @@ describe('ClusterCard Component', () => {
 
     fireEvent.click(screen.getByText('Global Climate Summit Accord'));
     expect(onSelect).toHaveBeenCalledWith(mockCluster);
+  });
+});
+
+describe('TimelineView Component', () => {
+  const timelineData = {
+    clusters: [
+      {
+        id: 'cluster-1',
+        label: 'Latest topic',
+        representativeHeadline: 'Latest news headline',
+        articleCount: 2,
+        startTime: '2026-09-21T10:00:00Z',
+        endTime: '2026-09-21T12:00:00Z',
+        durationHours: 2,
+        intensityScore: 2,
+        sourceBreakdown: { bbc: 2 }
+      }
+    ]
+  };
+
+  it('defaults to a right-to-left timeline with latest topics on the left', () => {
+    render(
+      <TimelineView
+        timelineData={timelineData}
+        onSelectCluster={vi.fn()}
+        selectedClusterId={null}
+      />
+    );
+
+    expect(screen.getByText('Latest on Left (RTL)')).toBeInTheDocument();
+    expect(screen.getByText(/Right-to-Left Mode/)).toBeInTheDocument();
   });
 });

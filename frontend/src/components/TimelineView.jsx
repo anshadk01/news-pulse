@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, parseISO, differenceInHours, isAfter, subHours, subDays } from 'date-fns';
+import { format, parseISO, differenceInHours } from 'date-fns';
 import { 
   Clock, 
   Layers, 
@@ -9,10 +9,9 @@ import {
   Filter, 
   SlidersHorizontal,
   Flame,
-  ZoomIn,
-  TrendingUp,
-  LayoutGrid,
-  GitCommit
+  ArrowLeftRight,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ClusterCard from './ClusterCard';
@@ -31,7 +30,7 @@ export default function TimelineView({
   searchTerm = ''
 }) {
   const [timeFilter, setTimeFilter] = useState('24h'); // '24h' | '48h' | 'all'
-  const [activeTab, setActiveTab] = useState('timeline'); // 'timeline' | 'grid'
+  const [direction, setDirection] = useState('rtl'); // 'rtl' (Latest on Left) | 'ltr' (Oldest on Left)
   const [hoveredCluster, setHoveredCluster] = useState(null);
 
   const rawClusters = timelineData?.clusters || [];
@@ -53,23 +52,22 @@ export default function TimelineView({
 
     // Time window filter
     if (timeFilter !== 'all' && result.length > 0) {
-      // Find latest date in dataset
       const latestTimestamp = Math.max(...result.map(c => new Date(c.endTime).getTime()));
       const cutoffMs = timeFilter === '24h' 
         ? latestTimestamp - (1000 * 60 * 60 * 24) 
         : latestTimestamp - (1000 * 60 * 60 * 48);
 
       const timeFiltered = result.filter(c => new Date(c.endTime).getTime() >= cutoffMs);
-      // Fallback if window is too narrow
       if (timeFiltered.length >= 4) {
         result = timeFiltered;
       }
     }
 
-    return result;
+    // Sort clusters by latest activity
+    return [...result].sort((a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
   }, [rawClusters, searchTerm, timeFilter]);
 
-  // Compute adaptive time scale boundaries based on active window (eliminates empty left void!)
+  // Compute adaptive time scale boundaries based on active window
   const { globalStartMs, globalEndMs, totalDurationMs } = useMemo(() => {
     if (!filteredClusters.length) return { globalStartMs: 0, globalEndMs: 0, totalDurationMs: 0 };
     
@@ -83,7 +81,6 @@ export default function TimelineView({
       if (e > maxT) maxT = e;
     });
 
-    // Add slight 2% margin on edges so bars never touch boundary lines
     const span = Math.max(maxT - minT, 1000 * 60 * 60 * 4);
     const startPadded = minT - (span * 0.015);
     const endPadded = maxT + (span * 0.015);
@@ -95,21 +92,27 @@ export default function TimelineView({
     };
   }, [filteredClusters]);
 
-  // Generate 5 evenly spaced time markers
+  // Generate time markers based on direction (RTL = Latest on Left -> Older on Right)
   const timeTicks = useMemo(() => {
     if (!totalDurationMs) return [];
     const ticks = [];
     const count = 5;
     for (let i = 0; i <= count; i++) {
-      const tMs = globalStartMs + (totalDurationMs * (i / count));
+      const ratio = i / count;
+      // In RTL: ratio 0 = globalEndMs (Latest), ratio 1 = globalStartMs (Oldest)
+      const tMs = direction === 'rtl'
+        ? globalEndMs - (totalDurationMs * ratio)
+        : globalStartMs + (totalDurationMs * ratio);
+
       ticks.push({
         timeMs: tMs,
         label: format(new Date(tMs), 'MMM d, HH:mm'),
-        percent: (i / count) * 100
+        percent: ratio * 100,
+        isLatest: i === 0 && direction === 'rtl'
       });
     }
     return ticks;
-  }, [globalStartMs, totalDurationMs]);
+  }, [globalStartMs, globalEndMs, totalDurationMs, direction]);
 
   if (filteredClusters.length === 0) {
     return (
@@ -137,7 +140,7 @@ export default function TimelineView({
       {/* 1. VISUAL TOPIC TIMELINE CANVAS */}
       <section className="glass-panel rounded-3xl p-5 sm:p-7 border border-slate-800/90 shadow-2xl relative overflow-hidden">
         
-        {/* Header with Title, Time Window Controls & Outlets Legend */}
+        {/* Header with Title, RTL/LTR Direction Toggle & Time Window Controls */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-800/80">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -148,16 +151,27 @@ export default function TimelineView({
                 Interactive Topic Timeline
               </h2>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-semibold border border-sky-500/25">
-                {filteredClusters.length} Active Topics
+                {filteredClusters.length} Topics
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Horizontal blocks show active time spans with dynamic intensity sizing and outlet badges
+              {direction === 'rtl' ? 'Right-to-Left: Latest breaking news on Left → Past history on Right' : 'Left-to-Right: Oldest on Left → Latest on Right'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Time Window Buttons (Fixes empty space on left) */}
+
+            {/* Direction Toggle (RTL / LTR) */}
+            <button
+              onClick={() => setDirection(prev => prev === 'rtl' ? 'ltr' : 'rtl')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-300 transition cursor-pointer"
+              title="Toggle timeline direction"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-sky-400" />
+              <span>{direction === 'rtl' ? 'Latest on Left (RTL)' : 'Past on Left (LTR)'}</span>
+            </button>
+
+            {/* Time Window Presets */}
             <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs font-medium">
               <button
                 onClick={() => setTimeFilter('24h')}
@@ -187,7 +201,7 @@ export default function TimelineView({
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                All History
+                All
               </button>
             </div>
 
@@ -200,6 +214,7 @@ export default function TimelineView({
                 </span>
               ))}
             </div>
+
           </div>
         </div>
 
@@ -211,9 +226,11 @@ export default function TimelineView({
               className="absolute top-0 flex flex-col items-center -translate-x-1/2"
               style={{ left: `${tick.percent}%` }}
             >
-              <div className="h-2.5 w-px bg-slate-700"></div>
-              <span className="text-[11px] font-mono text-slate-400 mt-1 font-semibold whitespace-nowrap">
-                {tick.label}
+              <div className={`h-2.5 w-px ${tick.isLatest ? 'bg-sky-400 w-0.5' : 'bg-slate-700'}`}></div>
+              <span className={`text-[11px] font-mono mt-1 font-semibold whitespace-nowrap ${
+                tick.isLatest ? 'text-sky-400 font-bold' : 'text-slate-400'
+              }`}>
+                {tick.label} {tick.isLatest ? '(Latest)' : ''}
               </span>
             </div>
           ))}
@@ -222,15 +239,29 @@ export default function TimelineView({
         {/* Interactive Topic Timeline Bars */}
         <div className="relative w-full overflow-x-auto pb-4 pt-1">
           <div className="min-w-[650px] md:min-w-full space-y-3.5">
-            {filteredClusters.slice(0, 20).map((cluster, index) => {
+            {filteredClusters.slice(0, 25).map((cluster, index) => {
               const start = new Date(cluster.startTime).getTime();
               const end = new Date(cluster.endTime).getTime();
               
-              // Smart horizontal position & width calculation
-              const leftPercent = Math.max(0, Math.min(90, ((start - globalStartMs) / totalDurationMs) * 100));
-              const rawWidthPercent = ((Math.max(end - start, 1000 * 60 * 45)) / totalDurationMs) * 100;
-              // Ensure crisp readable card width
-              const widthPercent = Math.max(22, Math.min(100 - leftPercent, rawWidthPercent + 18));
+              // Direction-aware placement calculation
+              let leftPercent = 0;
+              let widthPercent = 0;
+
+              if (direction === 'rtl') {
+                // RTL: Most recent event sits closest to left (0%)
+                const offsetMs = globalEndMs - end;
+                leftPercent = Math.max(0, Math.min(90, (offsetMs / totalDurationMs) * 100));
+                const spanMs = Math.max(end - start, 1000 * 60 * 45);
+                const rawWidth = (spanMs / totalDurationMs) * 100;
+                widthPercent = Math.max(22, Math.min(100 - leftPercent, rawWidth + 18));
+              } else {
+                // LTR: Oldest event sits closest to left (0%)
+                const offsetMs = start - globalStartMs;
+                leftPercent = Math.max(0, Math.min(90, (offsetMs / totalDurationMs) * 100));
+                const spanMs = Math.max(end - start, 1000 * 60 * 45);
+                const rawWidth = (spanMs / totalDurationMs) * 100;
+                widthPercent = Math.max(22, Math.min(100 - leftPercent, rawWidth + 18));
+              }
 
               const isSelected = selectedClusterId === cluster.id;
               const isHovered = hoveredCluster === cluster.id;
@@ -289,7 +320,7 @@ export default function TimelineView({
                         </p>
                       </div>
 
-                      {/* Outlet Badges on the right */}
+                      {/* Outlet Badges */}
                       <div className="flex items-center gap-1 shrink-0">
                         {Object.keys(cluster.sourceBreakdown || {}).map(src => {
                           const meta = SOURCE_COLORS[src] || { color: '#94a3b8', name: src };
@@ -327,7 +358,7 @@ export default function TimelineView({
         <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/60 mt-2">
           <span>Click any topic bar to open the full story reader</span>
           <span className="font-mono text-[11px]">
-            {filteredClusters.length} topics spanning {format(new Date(globalStartMs), 'MMM d')} → {format(new Date(globalEndMs), 'MMM d')}
+            {direction === 'rtl' ? 'Right-to-Left Mode' : 'Left-to-Right Mode'} • Showing latest {Math.min(25, filteredClusters.length)} topic streams
           </span>
         </div>
       </section>
