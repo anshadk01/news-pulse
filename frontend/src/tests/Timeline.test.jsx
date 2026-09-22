@@ -1,0 +1,86 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import React from 'react';
+import SourceFilter from '../components/SourceFilter';
+import ClusterCard from '../components/ClusterCard';
+
+describe('SourceFilter Component', () => {
+  it('renders all source buttons', () => {
+    const onToggle = vi.fn();
+    const onClear = vi.fn();
+    render(
+      <SourceFilter
+        selectedSources={['bbc']}
+        onToggleSource={onToggle}
+        onSelectAll={vi.fn()}
+        onClearAll={onClear}
+      />
+    );
+
+    expect(screen.getByText('All Outlets')).toBeInTheDocument();
+    expect(screen.getByText('BBC News')).toBeInTheDocument();
+    expect(screen.getByText('NPR')).toBeInTheDocument();
+    expect(screen.getByText('The Guardian')).toBeInTheDocument();
+    expect(screen.getByText('Al Jazeera')).toBeInTheDocument();
+  });
+
+  it('calls onToggleSource when a source is clicked', () => {
+    const onToggle = vi.fn();
+    render(
+      <SourceFilter
+        selectedSources={[]}
+        onToggleSource={onToggle}
+        onSelectAll={vi.fn()}
+        onClearAll={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByText('BBC News'));
+    expect(onToggle).toHaveBeenCalledWith('bbc');
+  });
+});
+
+describe('ClusterCard Component', () => {
+  const mockCluster = {
+    id: 'c_test123',
+    label: 'Global Climate Summit Accord',
+    keywords: ['Climate', 'Summit', 'Accord'],
+    representativeHeadline: 'World leaders sign binding climate emissions treaty in Geneva',
+    articleCount: 3,
+    startTime: '2026-09-21T10:00:00Z',
+    endTime: '2026-09-21T14:30:00Z',
+    durationHours: 4.5,
+    intensityScore: 3.2,
+    sourceBreakdown: { bbc: 2, guardian: 1 }
+  };
+
+  it('renders cluster label, keywords, and article count', () => {
+    const onSelect = vi.fn();
+    render(
+      <ClusterCard
+        cluster={mockCluster}
+        isSelected={false}
+        onSelect={onSelect}
+      />
+    );
+
+    expect(screen.getByText('Global Climate Summit Accord')).toBeInTheDocument();
+    expect(screen.getByText('3 articles')).toBeInTheDocument();
+    expect(screen.getByText('#Climate')).toBeInTheDocument();
+    expect(screen.getByText('4.5h span')).toBeInTheDocument();
+  });
+
+  it('triggers onSelect when clicked', () => {
+    const onSelect = vi.fn();
+    render(
+      <ClusterCard
+        cluster={mockCluster}
+        isSelected={false}
+        onSelect={onSelect}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Global Climate Summit Accord'));
+    expect(onSelect).toHaveBeenCalledWith(mockCluster);
+  });
+});
